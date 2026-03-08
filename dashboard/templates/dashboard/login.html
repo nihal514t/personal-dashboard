@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VELORA — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',sans-serif}
+body::before{content:'';position:fixed;top:-30%;left:50%;transform:translateX(-50%);width:600px;height:500px;background:radial-gradient(circle,rgba(255,149,0,.07),transparent 70%);pointer-events:none}
+.box{width:360px;background:#111;border:1px solid #1e1e1e;border-radius:18px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.logo{display:flex;flex-direction:column;align-items:center;margin-bottom:28px}
+.logo-mark{width:44px;height:44px;background:#FF9500;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;box-shadow:0 0 24px rgba(255,149,0,.35)}
+.logo-mark svg{width:22px;height:22px;fill:#000}
+.logo-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px}
+.logo-tag{font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.err{background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.25);border-radius:8px;padding:10px 13px;font-size:12px;color:#FF3B30;margin-bottom:16px}
+.fl{display:block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#555;margin-bottom:5px}
+.fi{width:100%;background:#181818;border:1px solid #222;border-radius:8px;padding:10px 13px;color:#fff;font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color .18s;margin-bottom:13px}
+.fi:focus{border-color:#FF9500;box-shadow:0 0 0 3px rgba(255,149,0,.1)}
+.fi::placeholder{color:#444}
+.btn{width:100%;padding:11px;background:#FF9500;border:none;border-radius:9px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s;margin-top:4px}
+.btn:hover{background:#e68600;box-shadow:0 4px 16px rgba(255,149,0,.35)}
+.sub{text-align:center;font-size:10px;color:#333;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">
+    <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+    <div class="logo-name">VELORA</div>
+    <div class="logo-tag">Creator OS</div>
+  </div>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <label class="fl">Username</label>
+    <input class="fi" name="username" type="text" placeholder="your username" autofocus autocomplete="username">
+    <label class="fl">Password</label>
+    <input class="fi" name="password" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn" type="submit">Sign In</button>
+  </form>
+  <div class="sub">VELORA Creator OS · Secure Login</div>
+</div>
+</body>
+</html>

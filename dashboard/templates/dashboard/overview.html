@@ -1,0 +1,190 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Overview — VELORA{% endblock %}
+{% block page_title %}Overview{% endblock %}
+{% block extra_head %}
+<style>
+.ov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.ov-mid{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:16px}
+.ov-bot{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ov-bot.single{grid-template-columns:1fr}
+.wk-bars{display:flex;align-items:flex-end;gap:6px;height:60px;margin-top:10px}
+.wk-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.wk-bar{width:100%;border-radius:3px 3px 0 0;background:var(--bg3);min-height:0;transition:height .5s cubic-bezier(.34,1.56,.64,1)}
+.wk-bar.on{background:var(--accent);opacity:.8}
+.wk-lbl{font-size:8px;color:var(--text3);font-family:'DM Mono',monospace}
+.rr{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);transition:padding .15s}
+.rr:last-child{border-bottom:none}
+.rr:hover{padding-left:5px}
+.rr-l{display:flex;align-items:center;gap:9px}
+.rr-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.rr-title{font-size:12px;font-weight:500}
+.rr-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.hm-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)}
+.hm-row:last-child{border-bottom:none}
+.hm-chk{width:20px;height:20px;border-radius:5px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.hm-chk.done{background:var(--accent);border-color:var(--accent);color:#000}
+.tx-mini{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.tx-mini:last-child{border-bottom:none}
+.tx-mini-amt{font-family:'DM Mono',monospace;font-size:12px;font-weight:600}
+.tx-mini-amt.income{color:var(--green)}.tx-mini-amt.expense{color:var(--red)}
+/* Goals strip */
+.goal-strip{display:flex;flex-direction:column;gap:8px}
+.goal-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:11px 13px;transition:all .18s}
+.goal-row:hover{border-color:var(--border2)}
+.goal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.goal-name{font-size:12px;font-weight:600}
+.goal-prog-bar{width:100%;height:4px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.goal-prog-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.34,1.56,.64,1)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="ov-grid">
+  <div class="stat-card s1">
+    <div class="stat-icon">🎬</div>
+    <div class="stat-label">Total Posted</div>
+    <div class="stat-value accent">{{ total_posted }}</div>
+    <div class="pb"><div class="pf" style="width:{% if total_posted > 100 %}100{% else %}{{ total_posted }}{% endif %}%"></div></div>
+  </div>
+  <div class="stat-card s2">
+    <div class="stat-icon">🔥</div>
+    <div class="stat-label">Best Streak</div>
+    <div class="stat-value">{{ best_streak }}<span class="stat-unit">days</span></div>
+  </div>
+  <div class="stat-card s3">
+    <div class="stat-icon">⚡</div>
+    <div class="stat-label">Today's Consistency</div>
+    <div class="stat-value {% if consistency >= 70 %}green{% elif consistency >= 40 %}accent{% else %}red{% endif %}">{{ consistency }}<span class="stat-unit">%</span></div>
+    <div class="pb"><div class="pf" style="width:{{ consistency }}%;{% if consistency >= 70 %}background:var(--green){% elif consistency < 40 %}background:var(--red){% endif %}"></div></div>
+  </div>
+  {% if is_admin %}
+  <div class="stat-card s4">
+    <div class="stat-icon">💰</div>
+    <div class="stat-label">Net Balance</div>
+    <div class="stat-value {% if net_balance >= 0 %}green{% else %}red{% endif %}">{% if net_balance >= 0 %}+{% endif %}{{ net_balance|floatformat:0 }}</div>
+  </div>
+  {% else %}
+  <div class="stat-card s4">
+    <div class="stat-icon">🎯</div>
+    <div class="stat-label">Active Goals</div>
+    <div class="stat-value accent">{{ goals|length }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="ov-mid">
+  <div class="card" style="padding:18px">
+    <div class="sh"><div class="st">Weekly Habits</div><span class="badge b-idea">7 days</span></div>
+    <div class="wk-bars" id="wk-chart"></div>
+  </div>
+  {% if is_admin %}
+  <div class="card" style="padding:18px;display:flex;flex-direction:column;justify-content:center">
+    <div class="stat-label">Net Balance</div>
+    <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:{% if net_balance >= 0 %}var(--green){% else %}var(--red){% endif %}">{% if net_balance >= 0 %}+{% endif %}{{ net_balance|floatformat:2 }}</div>
+    <hr>
+    <div style="display:flex;gap:16px;font-size:12px">
+      <span style="color:var(--green)">▲ {{ total_income|floatformat:2 }}</span>
+      <span style="color:var(--red)">▼ {{ total_expense|floatformat:2 }}</span>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="padding:18px">
+    <div class="st" style="margin-bottom:10px">Today's Habits</div>
+    {% for item in today_habits %}
+    <div class="hm-row">
+      <div class="hm-chk {% if item.log.completed %}done{% endif %}">{% if item.log.completed %}✓{% endif %}</div>
+      <div style="font-size:12px;flex:1">{{ item.habit.name }}</div>
+      {% if item.habit.streak %}<span style="font-size:10px;color:var(--accent);font-family:'DM Mono',monospace">🔥{{ item.habit.streak }}</span>{% endif %}
+    </div>
+    {% empty %}<div style="color:var(--text3);font-size:11px;text-align:center;padding:12px">No habits yet — <a href="{% url 'habits' %}" style="color:var(--accent)">Add one</a></div>{% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div style="display:grid;grid-template-columns:{% if is_admin %}1fr 1fr 1fr{% else %}1fr 1fr{% endif %};gap:16px">
+  <!-- Recent Posted Content -->
+  <div class="card" style="padding:18px">
+    <div class="sh">
+      <div class="st">Recent Posts</div>
+      <a href="{% url 'content' %}" class="btn btn-g btn-sm">View All →</a>
+    </div>
+    {% for item in recent_content %}
+    <div class="rr">
+      <div class="rr-l">
+        <div class="rr-dot" style="background:var(--green)"></div>
+        <div>
+          <div class="rr-title">{{ item.title }}</div>
+          <div class="rr-sub">{% if is_admin and item.created_by %}{{ item.created_by.username }} · {% endif %}{{ item.account.username|default:"No account" }}</div>
+        </div>
+      </div>
+      <span class="badge b-posted">Posted</span>
+    </div>
+    {% empty %}<div style="color:var(--text3);font-size:11px;text-align:center;padding:16px">No posts yet</div>{% endfor %}
+  </div>
+
+  <!-- Goals -->
+  <div class="card" style="padding:18px">
+    <div class="sh">
+      <div class="st">Goals</div>
+      <a href="{% url 'goals' %}" class="btn btn-g btn-sm">View All →</a>
+    </div>
+    <div class="goal-strip">
+      {% for g in goals %}
+      <div class="goal-row">
+        <div class="goal-hd">
+          <div class="goal-name">{{ g.title }}</div>
+          <span class="badge b-{{ g.status }}">{{ g.get_status_display }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="goal-prog-bar" style="flex:1">
+            <div class="goal-prog-fill" style="width:{{ g.progress }}%;background:{% if g.status == 'completed' %}var(--green){% elif g.status == 'paused' %}var(--accent){% else %}var(--accent){% endif %}"></div>
+          </div>
+          <span style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);flex-shrink:0">{{ g.progress }}%</span>
+        </div>
+      </div>
+      {% empty %}<div style="color:var(--text3);font-size:11px;text-align:center;padding:16px">No goals set yet</div>{% endfor %}
+    </div>
+  </div>
+
+  {% if is_admin %}
+  <!-- Recent Transactions -->
+  <div class="card" style="padding:18px">
+    <div class="sh">
+      <div class="st">Transactions</div>
+      <a href="{% url 'finance' %}" class="btn btn-g btn-sm">View All →</a>
+    </div>
+    {% for tx in recent_transactions %}
+    <div class="tx-mini">
+      <div class="rr-l">
+        <span class="badge b-{{ tx.type }}">{{ tx.get_type_display }}</span>
+        <div>
+          <div style="font-size:12px;font-weight:500">{{ tx.category|default:"—" }}</div>
+          <div style="font-size:10px;color:var(--text3)">{{ tx.date|date:"M d" }}</div>
+        </div>
+      </div>
+      <div class="tx-mini-amt {{ tx.type }}">{% if tx.type == 'income' %}+{% elif tx.type == 'expense' %}-{% endif %}{{ tx.amount|floatformat:2 }}</div>
+    </div>
+    {% empty %}<div style="color:var(--text3);font-size:11px;text-align:center;padding:16px">No transactions yet</div>{% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const wkData = {{ weekly_data|safe }};
+const chart  = document.getElementById('wk-chart');
+wkData.forEach((d,i) => {
+  const col = document.createElement('div'); col.className = 'wk-col';
+  const bar = document.createElement('div'); bar.className = 'wk-bar' + (d.rate > 0 ? ' on' : '');
+  bar.style.height = '0'; bar.title = d.date + ': ' + d.rate + '%';
+  const lbl = document.createElement('div'); lbl.className = 'wk-lbl'; lbl.textContent = d.date;
+  col.appendChild(bar); col.appendChild(lbl); chart.appendChild(col);
+  setTimeout(() => { bar.style.height = Math.max(d.rate * 0.55, d.rate > 0 ? 3 : 0) + 'px'; }, 80 + i * 50);
+});
+// Animate goal bars
+document.querySelectorAll('.goal-prog-fill').forEach(el => {
+  const w = el.style.width; el.style.width = '0';
+  setTimeout(() => { el.style.width = w; }, 200);
+});
+</script>
+{% endblock %}

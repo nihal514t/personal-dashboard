@@ -1,0 +1,371 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Finance — VELORA{% endblock %}
+{% block page_title %}Finance{% endblock %}
+{% block extra_head %}
+<style>
+.fin-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+.fin-lay{display:grid;grid-template-columns:1fr 270px;gap:18px}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:14px}
+.mc-wrap{display:flex;align-items:flex-end;gap:6px;height:70px;margin-top:12px}
+.mc-grp{flex:1;display:flex;flex-direction:column;align-items:center}
+.mc-inner{display:flex;gap:2px;align-items:flex-end;width:100%;height:58px}
+.mc-bar{flex:1;border-radius:2px 2px 0 0;min-height:0;transition:height .5s cubic-bezier(.34,1.56,.64,1)}
+.mc-bar.inc{background:var(--green);opacity:.75}.mc-bar.inc:hover{opacity:1}
+.mc-bar.exp{background:var(--red);opacity:.75}.mc-bar.exp:hover{opacity:1}
+.mc-lbl{font-size:8px;font-family:'DM Mono',monospace;color:var(--text3);margin-top:4px}
+.cat-row-wrap{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.cat-row{display:flex;align-items:center;gap:8px}
+.cat-nm{font-size:11px;color:var(--text2);width:90px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-bw{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.cat-bf{height:100%;background:var(--accent);border-radius:3px;width:0;transition:width .5s cubic-bezier(.34,1.56,.64,1)}
+.cat-am{font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);width:52px;text-align:right;flex-shrink:0}
+.txl{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.txl-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ftabs{display:flex;gap:3px}
+.ftab{padding:4px 11px;border-radius:6px;border:none;background:transparent;color:var(--text3);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s;font-weight:500}
+.ftab.on{background:var(--bg3);color:var(--text)}
+.tx-scroll{max-height:320px;overflow-y:auto}
+.tx-row{padding:11px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px;transition:background .14s}
+.tx-row:last-child{border-bottom:none}
+.tx-row:hover{background:var(--bg3)}
+.tx-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.tx-ico.income{background:rgba(52,199,89,.12)}.tx-ico.expense{background:rgba(255,59,48,.12)}.tx-ico.transfer{background:rgba(175,82,222,.12)}
+.tx-inf{flex:1;min-width:0}
+.tx-inf-t{font-size:12px;font-weight:500}
+.tx-inf-s{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-right{text-align:right;flex-shrink:0}
+.tx-amt{font-family:'Syne',sans-serif;font-size:13px;font-weight:700}
+.tx-amt.income{color:var(--green)}.tx-amt.expense{color:var(--red)}.tx-amt.transfer{color:var(--purple)}
+.tx-date{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px}
+.tx-del{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:4px;border-radius:5px;opacity:0;transition:all .18s}
+.tx-row:hover .tx-del{opacity:1}
+.tx-del:hover{background:rgba(255,59,48,.1);color:var(--red)}
+.acc-sb{display:flex;flex-direction:column;gap:9px;position:sticky;top:64px}
+.fac{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;transition:all .18s}
+.fac:hover{border-color:var(--border2)}
+.fac-name{font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.fac-bal{font-family:'Syne',sans-serif;font-size:18px;font-weight:800}
+.fac-del{width:24px;height:24px;border:1px solid var(--border2);background:transparent;border-radius:5px;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .18s;flex-shrink:0;opacity:0}
+.fac:hover .fac-del{opacity:1}
+.fac-del:hover{background:rgba(255,59,48,.1);color:var(--red);border-color:rgba(255,59,48,.2)}
+.fab-menu{position:fixed;bottom:82px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:200;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;transform:translateY(8px)}
+.fab-menu.on{opacity:1;pointer-events:all;transform:translateY(0)}
+.fab-r{display:flex;align-items:center;gap:9px;justify-content:flex-end}
+.fab-lbl{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:6px 11px;font-size:11px;color:var(--text);white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.fab-mini{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:transform .18s}
+.fab-mini:hover{transform:scale(1.12)}
+.fab-mini.inc{background:var(--green);color:#000}
+.fab-mini.exp{background:var(--red);color:#fff}
+.fab-mini.tr{background:var(--purple);color:#fff}
+.tx-type-pill{display:inline-flex;align-items:center;padding:4px 11px;border-radius:20px;font-size:10px;font-weight:700;margin-bottom:14px;font-family:'DM Mono',monospace;letter-spacing:.5px;text-transform:uppercase}
+.tx-type-pill.income{background:rgba(52,199,89,.15);color:var(--green)}
+.tx-type-pill.expense{background:rgba(255,59,48,.15);color:var(--red)}
+.tx-type-pill.transfer{background:rgba(175,82,222,.15);color:var(--purple)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="fin-sum">
+  <div class="stat-card s1">
+    <div class="stat-icon">📈</div>
+    <div class="stat-label">Total Income</div>
+    <div class="stat-value green" style="font-size:20px">+{{ total_income|floatformat:2 }}</div>
+  </div>
+  <div class="stat-card s2">
+    <div class="stat-icon">📉</div>
+    <div class="stat-label">Total Expense</div>
+    <div class="stat-value red" style="font-size:20px">-{{ total_expense|floatformat:2 }}</div>
+  </div>
+  <div class="stat-card s3">
+    <div class="stat-icon">💰</div>
+    <div class="stat-label">Net Balance</div>
+    <div class="stat-value {% if net_balance >= 0 %}green{% else %}red{% endif %}" style="font-size:20px">{% if net_balance >= 0 %}+{% endif %}{{ net_balance|floatformat:2 }}</div>
+  </div>
+</div>
+<div class="fin-lay">
+  <div>
+    <div class="chart-card">
+      <div class="sh">
+        <div class="st">Monthly Overview</div>
+        <div style="display:flex;gap:12px;font-size:10px;font-family:'DM Mono',monospace">
+          <span style="color:var(--green)">▮ Income</span><span style="color:var(--red)">▮ Expense</span>
+        </div>
+      </div>
+      <div class="mc-wrap" id="mc-chart"></div>
+    </div>
+    <div class="chart-card">
+      <div class="st">Expense by Category</div>
+      <div class="cat-row-wrap" id="cat-chart"></div>
+    </div>
+    <div class="txl">
+      <div class="txl-head">
+        <div class="st">Transactions</div>
+        <div class="ftabs">
+          <button class="ftab on" onclick="setFilter('all',this)">All</button>
+          <button class="ftab" onclick="setFilter('income',this)">Income</button>
+          <button class="ftab" onclick="setFilter('expense',this)">Expense</button>
+          <button class="ftab" onclick="setFilter('transfer',this)">Transfer</button>
+        </div>
+      </div>
+      <div class="tx-scroll" id="tx-list"></div>
+    </div>
+  </div>
+  <div class="acc-sb">
+    <div class="sh">
+      <div class="st" style="font-size:12px">Accounts</div>
+      <button class="btn btn-g btn-sm" onclick="openModal('add-facc-mo')">+ Add</button>
+    </div>
+    <div id="facc-list">
+      {% for acc in acc_data_list %}
+      <div class="fac" id="fac-{{ acc.id }}">
+        <div>
+          <div class="fac-name">{{ acc.name }}</div>
+          <div class="fac-bal" id="fac-bal-{{ acc.id }}">{{ acc.balance }}</div>
+        </div>
+        <button class="fac-del" onclick="delFinAcc({{ acc.id }},'{{ acc.name|escapejs }}')">✕</button>
+      </div>
+      {% empty %}
+      <div id="no-facc" style="color:var(--text3);font-size:11px;text-align:center;padding:12px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r)">No accounts yet</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<div class="fab-menu" id="fab-menu">
+  <div class="fab-r"><div class="fab-lbl">Income</div><button class="fab-mini inc" onclick="openTxModal('income')">↑</button></div>
+  <div class="fab-r"><div class="fab-lbl">Expense</div><button class="fab-mini exp" onclick="openTxModal('expense')">↓</button></div>
+  <div class="fab-r"><div class="fab-lbl">Transfer</div><button class="fab-mini tr" onclick="openTxModal('transfer')">⇄</button></div>
+</div>
+<button class="fab" id="fab-btn" onclick="toggleFab()">+</button>
+{% endblock %}
+
+{% block modals %}
+<div class="mo" id="tx-modal">
+  <div class="mo-box">
+    <div class="mo-title"><em id="tx-ico">💸</em><span id="tx-mo-t">Add Transaction</span></div>
+    <div class="tx-type-pill" id="tx-pill">income</div>
+    <input type="hidden" id="tx-type">
+    <div id="tx-ie">
+      <div class="f2">
+        <div class="fg"><label class="fl">Date</label><input class="fi" type="date" id="ie-date"></div>
+        <div class="fg"><label class="fl">Amount</label><input class="fi" type="number" step="0.01" min="0" id="ie-amt" placeholder="0.00"></div>
+      </div>
+      <div class="f2">
+        <div class="fg">
+          <label class="fl">Category</label>
+          <select class="fi" id="ie-cat">
+            <option value="">— select —</option>
+            <optgroup label="Income"><option value="sales">Sales</option><option value="freelance">Freelance</option><option value="investment">Investment</option></optgroup>
+            <optgroup label="Expense"><option value="food">Food & Dining</option><option value="transport">Transport</option><option value="utilities">Utilities</option><option value="entertainment">Entertainment</option><option value="shopping">Shopping</option><option value="health">Health</option><option value="education">Education</option><option value="rent">Rent</option></optgroup>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Account</label>
+          <select class="fi" id="ie-acc">
+            <option value="">— none —</option>
+            {% for acc in fin_accounts %}<option value="{{ acc.id }}">{{ acc.name }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="tx-tr" style="display:none">
+      <div class="fg"><label class="fl">Date</label><input class="fi" type="date" id="tr-date"></div>
+      <div class="f2">
+        <div class="fg"><label class="fl">From</label><select class="fi" id="tr-from"><option value="">— select —</option>{% for acc in fin_accounts %}<option value="{{ acc.id }}">{{ acc.name }}</option>{% endfor %}</select></div>
+        <div class="fg"><label class="fl">To</label><select class="fi" id="tr-to"><option value="">— select —</option>{% for acc in fin_accounts %}<option value="{{ acc.id }}">{{ acc.name }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="fg"><label class="fl">Amount</label><input class="fi" type="number" step="0.01" min="0" id="tr-amt" placeholder="0.00"></div>
+    </div>
+    <div class="fg"><label class="fl">Notes (optional)</label><input class="fi" id="tx-notes" placeholder="e.g. Grocery run…"></div>
+    <div class="mo-actions">
+      <button class="btn btn-g" onclick="closeModal('tx-modal')">Cancel</button>
+      <button class="btn btn-p" id="tx-save-btn" onclick="saveTx()">Add</button>
+    </div>
+  </div>
+</div>
+<div class="mo" id="add-facc-mo">
+  <div class="mo-box">
+    <div class="mo-title"><em>🏦</em>Add Account</div>
+    <div class="fg"><label class="fl">Account Name</label><input class="fi" id="new-facc-nm" placeholder="e.g. Main Bank, Cash…"></div>
+    <div class="mo-actions">
+      <button class="btn btn-g" onclick="closeModal('add-facc-mo')">Cancel</button>
+      <button class="btn btn-p" onclick="addFinAcc()">Add</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let txs = {{ transactions|safe }};
+let accData = {{ acc_data|safe }};  // [{id,name,balance}]
+let curFilter = 'all', fabOpen = false;
+const TX_ICONS = {salary:'💼',freelance:'💻',investment:'📈',food:'🍜',transport:'🚗',utilities:'⚡',entertainment:'🎬',shopping:'🛍',health:'❤️',education:'📚',rent:'🏠',other:'💰',transfer:'⇄',income:'💰',expense:'💸',''  :'💰'};
+
+function renderTx(){
+  const el=document.getElementById('tx-list');
+  const items=curFilter==='all'?txs:txs.filter(t=>t.type===curFilter);
+  if(!items.length){el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:12px">No transactions. Tap + to add one.</div>';return;}
+  el.innerHTML='';
+  items.forEach(t=>{
+    const row=document.createElement('div');row.className='tx-row';
+    const ico=TX_ICONS[t.category]||TX_ICONS[t.type]||'💰';
+    const pre=t.type==='income'?'+':t.type==='expense'?'-':'⇄';
+    const acct=t.type==='transfer'?(t.from_account||'?')+' → '+(t.to_account||'?'):(t.account||'—');
+    const cat=t.category?(t.category.charAt(0).toUpperCase()+t.category.slice(1)):(t.type.charAt(0).toUpperCase()+t.type.slice(1));
+    row.innerHTML=`
+      <div class="tx-ico ${t.type}">${ico}</div>
+      <div class="tx-inf">
+        <div class="tx-inf-t">${cat}</div>
+        <div class="tx-inf-s">${escHtml(acct)}${t.notes?' · '+escHtml(t.notes.substring(0,28)):''}</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amt ${t.type}">${pre}${t.amount.toFixed(2)}</div>
+        <div class="tx-date">${t.date}</div>
+      </div>
+      <button class="tx-del" onclick="delTx(${t.id},'${cat}')">✕</button>`;
+    el.appendChild(row);
+  });
+}
+function setFilter(f,btn){
+  curFilter=f;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');renderTx();
+}
+function delTx(id,cat){
+  confirmAction({icon:'💸',msg:`Delete "${cat}" transaction?`,sub:'This will also reverse the account balance.'},async()=>{
+    const res=await fetch('/api/finance/'+id+'/delete/',{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
+    if(res.ok){txs=txs.filter(t=>t.id!==id);renderTx();}
+  });
+}
+
+function toggleFab(){
+  fabOpen=!fabOpen;
+  document.getElementById('fab-menu').classList.toggle('on',fabOpen);
+  document.getElementById('fab-btn').style.transform=fabOpen?'rotate(45deg)':'rotate(0)';
+}
+document.addEventListener('click',e=>{
+  if(fabOpen&&!e.target.closest('#fab-btn')&&!e.target.closest('#fab-menu'))toggleFab();
+});
+
+function openTxModal(type){
+  if(fabOpen)toggleFab();
+  document.getElementById('tx-type').value=type;
+  const pill=document.getElementById('tx-pill');
+  pill.className='tx-type-pill '+type;
+  pill.textContent={income:'↑ Income',expense:'↓ Expense',transfer:'⇄ Transfer'}[type];
+  document.getElementById('tx-mo-t').textContent='Add '+type.charAt(0).toUpperCase()+type.slice(1);
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('ie-date').value=today;
+  document.getElementById('tr-date').value=today;
+  ['ie-amt','tr-amt','tx-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['ie-cat','ie-acc','tr-from','tr-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
+  const isTr=type==='transfer';
+  document.getElementById('tx-ie').style.display=isTr?'none':'block';
+  document.getElementById('tx-tr').style.display=isTr?'block':'none';
+  openModal('tx-modal');
+}
+
+async function saveTx(){
+  const type=document.getElementById('tx-type').value;
+  if(!type)return;
+  const isTr=type==='transfer';
+  const date=document.getElementById(isTr?'tr-date':'ie-date').value;
+  const amount=parseFloat(document.getElementById(isTr?'tr-amt':'ie-amt').value);
+  if(!date){alert('Please enter a date.');return;}
+  if(!amount||amount<=0){alert('Please enter a valid amount.');return;}
+  const btn=document.getElementById('tx-save-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  const payload={type,date,amount,notes:document.getElementById('tx-notes').value.trim()};
+  if(isTr){
+    payload.from_id=document.getElementById('tr-from').value||null;
+    payload.to_id=document.getElementById('tr-to').value||null;
+  }else{
+    payload.category=document.getElementById('ie-cat').value||'other';
+    payload.account_id=document.getElementById('ie-acc').value||null;
+  }
+  try{
+    const res=await fetch('/api/finance/add/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(payload)});
+    if(!res.ok){const e=await res.text();console.error(e);alert('Error saving: '+res.status);}
+    else{
+      const tx=await res.json();
+      if(tx.id){
+        txs.unshift(tx);renderTx();
+        // Update displayed balances
+        if(tx.updated_balances){
+          Object.entries(tx.updated_balances).forEach(([accId,bal])=>{
+            const el=document.getElementById('fac-bal-'+accId);
+            if(el) el.textContent=bal.toFixed(2);
+            const a=accData.find(x=>x.id===parseInt(accId));
+            if(a) a.balance=bal;
+          });
+        }
+        closeModal('tx-modal');
+      }
+    }
+  }catch(e){console.error(e);alert('Network error.');}
+  btn.disabled=false;btn.textContent='Add';
+}
+
+async function addFinAcc(){
+  const name=document.getElementById('new-facc-nm').value.trim();
+  if(!name)return;
+  const res=await fetch('/api/finance/accounts/add/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({name})});
+  const acc=await res.json();
+  if(acc.id){
+    accData.push({id:acc.id,name:acc.name,balance:0});
+    document.getElementById('no-facc')?.remove();
+    const list=document.getElementById('facc-list');
+    const card=document.createElement('div');card.className='fac';card.id='fac-'+acc.id;
+    card.innerHTML=`<div><div class="fac-name">${escHtml(acc.name)}</div><div class="fac-bal" id="fac-bal-${acc.id}">0.00</div></div><button class="fac-del" onclick="delFinAcc(${acc.id},'${escHtml(acc.name).replace(/'/g,"\\'")}')">✕</button>`;
+    list.appendChild(card);
+    ['ie-acc','tr-from','tr-to'].forEach(sid=>{const s=document.getElementById(sid);if(s){const o=document.createElement('option');o.value=acc.id;o.textContent=acc.name;s.appendChild(o);}});
+    document.getElementById('new-facc-nm').value='';
+    closeModal('add-facc-mo');
+  }
+}
+function delFinAcc(id,name){
+  confirmAction({icon:'🏦',msg:`Delete account "${name}"?`,sub:'All linked transactions will lose account reference.'},async()=>{
+    const res=await fetch('/api/finance/accounts/'+id+'/delete/',{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
+    if(res.ok){
+      document.getElementById('fac-'+id)?.remove();
+      accData=accData.filter(a=>a.id!==id);
+      ['ie-acc','tr-from','tr-to'].forEach(sid=>{const s=document.getElementById(sid);if(s)Array.from(s.options).forEach(o=>{if(o.value==id)o.remove();});});
+    }
+  });
+}
+
+// Monthly chart
+const monthly={{ monthly_data|safe }};
+const maxM=Math.max(...monthly.map(m=>Math.max(m.income,m.expense)),1);
+const mcEl=document.getElementById('mc-chart');
+monthly.forEach(m=>{
+  const grp=document.createElement('div');grp.className='mc-grp';
+  const inn=document.createElement('div');inn.className='mc-inner';
+  const ib=document.createElement('div');ib.className='mc-bar inc';ib.style.height='0';ib.title='Income: '+m.income.toFixed(2);
+  const eb=document.createElement('div');eb.className='mc-bar exp';eb.style.height='0';eb.title='Expense: '+m.expense.toFixed(2);
+  inn.appendChild(ib);inn.appendChild(eb);
+  const lbl=document.createElement('div');lbl.className='mc-lbl';lbl.textContent=m.month;
+  grp.appendChild(inn);grp.appendChild(lbl);mcEl.appendChild(grp);
+  setTimeout(()=>{
+    ib.style.height=Math.max((m.income/maxM)*54,m.income>0?3:0)+'px';
+    eb.style.height=Math.max((m.expense/maxM)*54,m.expense>0?3:0)+'px';
+  },100);
+});
+
+// Category chart
+const cats={{ cat_data|safe }};
+const catEl=document.getElementById('cat-chart');
+if(cats.length){
+  const maxC=cats[0].amount;
+  cats.slice(0,7).forEach(c=>{
+    const row=document.createElement('div');row.className='cat-row';
+    const pct=Math.max(Math.round((c.amount/maxC)*100),2);
+    row.innerHTML=`<div class="cat-nm">${escHtml(c.cat)}</div><div class="cat-bw"><div class="cat-bf" data-w="${pct}"></div></div><div class="cat-am">${c.amount.toFixed(0)}</div>`;
+    catEl.appendChild(row);
+  });
+  setTimeout(()=>document.querySelectorAll('.cat-bf').forEach(el=>el.style.width=el.dataset.w+'%'),150);
+}else{catEl.innerHTML='<div style="color:var(--text3);font-size:11px;text-align:center;padding:12px">No expense data yet</div>';}
+
+renderTx();
+</script>
+{% endblock %}

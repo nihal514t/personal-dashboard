@@ -1,0 +1,252 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Content — VELORA{% endblock %}
+{% block page_title %}Content{% endblock %}
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<style>
+.cm{display:grid;grid-template-columns:1fr 244px;gap:16px;min-height:calc(100vh - 104px)}
+.kb{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(100vh - 140px)}
+.kh{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border-radius:var(--r) var(--r) 0 0;position:sticky;top:0}
+.kt{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px}
+.kd{width:6px;height:6px;border-radius:50%}
+.kd-idea{background:var(--blue)}.kd-editing{background:var(--accent)}.kd-posted{background:var(--green)}
+.kn{font-size:9px;font-family:'DM Mono',monospace;background:var(--bg3);color:var(--text3);padding:2px 6px;border-radius:20px}
+.kl{flex:1;padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.kadd{margin:0 8px 8px;padding:7px;border:1px dashed var(--border2);border-radius:var(--rs);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .18s;font-family:'Inter',sans-serif}
+.kadd:hover{border-color:var(--accent);color:var(--accent);background:var(--glow2)}
+.cc{background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:11px;cursor:grab;transition:all .18s;position:relative}
+.cc:hover{background:var(--bg4);transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.cc.sortable-ghost{opacity:.2;border:2px dashed var(--accent);background:var(--glow2)}
+.cc.sortable-drag{cursor:grabbing;box-shadow:0 10px 28px rgba(0,0,0,.5);transform:rotate(1.5deg) scale(1.02)}
+.cc-title{font-size:12px;font-weight:600;margin-bottom:4px;line-height:1.4;padding-right:40px}
+.cc-desc{font-size:10px;color:var(--text2);margin-bottom:8px;line-height:1.5}
+.cc-foot{display:flex;align-items:center;justify-content:space-between}
+.cc-acc{font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);display:flex;align-items:center;gap:4px}
+.cc-del{position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:4px;background:transparent;border:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .18s;opacity:0}
+.cc:hover .cc-del{opacity:1}
+.cc-del:hover{background:rgba(255,59,48,.1);color:var(--red)}
+.cc-appr{font-size:8px;font-family:'DM Mono',monospace;padding:2px 5px;border-radius:10px;font-weight:600;text-transform:uppercase;position:absolute;top:8px;right:28px}
+/* Right panel */
+.ap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:0;max-height:calc(100vh - 140px);overflow-y:auto}
+.ap-lbl{font-size:8px;font-family:'DM Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--text3)}
+.as-btn{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 11px;color:var(--text);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color .18s}
+.as-btn:hover{border-color:var(--accent)}
+.as-drop{position:absolute;top:calc(100%+3px);left:0;right:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);z-index:300;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:200px;overflow-y:auto}
+.as-drop.on{display:block}
+.as-opt{padding:8px 11px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .14s}
+.as-opt:hover{background:var(--bg4)}
+.as-opt.sel{color:var(--accent)}
+.acc-li{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:9px 11px;display:flex;align-items:center;gap:7px;transition:all .18s;margin-bottom:5px}
+.acc-li:hover{border-color:var(--border2)}
+.acc-li-info{flex:1;min-width:0}
+.acc-li-name{font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-li-plat{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace}
+.acc-li-del{width:20px;height:20px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .18s;flex-shrink:0;opacity:0}
+.acc-li:hover .acc-li-del{opacity:1}
+.acc-li-del:hover{background:rgba(255,59,48,.1);color:var(--red)}
+</style>
+{% endblock %}
+{% block topbar_actions %}<button class="btn btn-p" onclick="openModal('add-card-mo')">+ New Card</button>{% endblock %}
+{% block content %}
+<div class="cm">
+  <div class="kb">
+    {% for col_name, col_status in columns %}
+    <div class="kc">
+      <div class="kh">
+        <div class="kt"><span class="kd kd-{{ col_status }}"></span>{{ col_name }}</div>
+        <span class="kn" id="cnt-{{ col_status }}">0</span>
+      </div>
+      <div class="kl" id="col-{{ col_status }}" data-status="{{ col_status }}"></div>
+      <button class="kadd" onclick="openAddCard('{{ col_status }}')">＋ Add</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="ap">
+    <div class="ap-lbl">Filter by Account</div>
+    <div style="position:relative" id="as-wrap">
+      <button class="as-btn" onclick="toggleDrop()">
+        <span id="as-text">{% if selected_account %}{{ selected_account.username }}{% else %}All Accounts{% endif %}</span>
+        <span>▾</span>
+      </button>
+      <div class="as-drop" id="as-drop">
+        <div class="as-opt {% if not selected_account_id %}sel{% endif %}" onclick="pickAcc('','All Accounts')">All Accounts</div>
+        {% for acc in accounts %}
+        <div class="as-opt {% if selected_account_id == acc.id|stringformat:'s' %}sel{% endif %}"
+             onclick="pickAcc('{{ acc.id }}','{{ acc.username }}')">
+          <span class="pd pd-{{ acc.platform }}"></span>{{ acc.username }}
+          <span style="color:var(--text3);font-size:9px;margin-left:auto">{{ acc.get_platform_display }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if selected_account %}
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:11px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);text-transform:uppercase">Total Posts</span>
+        <span style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent)">{{ selected_account.total_posts }}</span>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="ap-lbl" style="margin-top:4px">Accounts</div>
+    <div id="acc-list-box">
+      {% for acc in accounts %}
+      <div class="acc-li" id="acli-{{ acc.id }}">
+        <span class="pd pd-{{ acc.platform }}"></span>
+        <div class="acc-li-info">
+          <div class="acc-li-name">{{ acc.username }}</div>
+          <div class="acc-li-plat">{{ acc.get_platform_display }}{% if is_admin and acc.owner %} · {{ acc.owner.username }}{% endif %}</div>
+        </div>
+        {% if is_admin %}<button class="acc-li-del" onclick="delAcc({{ acc.id }},'{{ acc.username|escapejs }}',event)">✕</button>{% endif %}
+      </div>
+      {% empty %}
+      <div id="no-acc-msg" style="color:var(--text3);font-size:11px;text-align:center;padding:10px">{% if is_admin %}No accounts yet{% else %}No accounts assigned{% endif %}</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="mo" id="add-card-mo">
+  <div class="mo-box">
+    <div class="mo-title"><em>✏️</em>Add Content Card</div>
+    <input type="hidden" id="card-status" value="idea">
+    <div class="fg"><label class="fl">Title</label><input class="fi" id="card-title" placeholder="Video idea, post concept…"></div>
+    <div class="fg"><label class="fl">Description</label><textarea class="fi" id="card-desc" placeholder="Notes…"></textarea></div>
+    <div class="fg"><label class="fl">Account</label>
+      <select class="fi" id="card-account">
+        <option value="">No account</option>
+        {% for acc in accounts %}<option value="{{ acc.id }}">{{ acc.get_platform_display }} — {{ acc.username }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="mo-actions">
+      <button class="btn btn-g" onclick="closeModal('add-card-mo')">Cancel</button>
+      <button class="btn btn-p" id="save-card-btn" onclick="addCard()">Add Card</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const IS_ADMIN = {{ is_admin|yesno:"true,false" }};
+let allCards = {
+  idea:    {{ ideas|safe }},
+  editing: {{ editing|safe }},
+  posted:  {{ posted|safe }}
+};
+
+function renderAll(){
+  ['idea','editing','posted'].forEach(s=>{
+    const col=document.getElementById('col-'+s);
+    col.innerHTML='';
+    allCards[s].forEach(c=>col.appendChild(mkCard(c)));
+    document.getElementById('cnt-'+s).textContent=allCards[s].length;
+  });
+}
+
+function mkCard(c){
+  const el=document.createElement('div');
+  el.className='cc'; el.dataset.id=c.id; el.dataset.status=c.status;
+  const plat=c.account__platform||''; const uname=c.account__username||'';
+  const pdot=plat?`<span class="pd pd-${plat}"></span>`:'';
+  const abg={pending:'rgba(255,149,0,.14)',approved:'rgba(52,199,89,.14)',rejected:'rgba(255,59,48,.14)'};
+  const atx={pending:'#FF9500',approved:'#34C759',rejected:'#FF3B30'};
+  const as=c.approval_status||'pending';
+  const apprHtml=IS_ADMIN?`<span class="cc-appr" style="background:${abg[as]};color:${atx[as]}">${as}</span>`:'';
+  el.innerHTML=`
+    ${apprHtml}
+    <div class="cc-title">${escHtml(c.title)}</div>
+    ${c.description?`<div class="cc-desc">${escHtml(c.description)}</div>`:''}
+    <div class="cc-foot">
+      <div class="cc-acc">${pdot}${escHtml(uname||'—')}</div>
+      <button class="cc-del" onclick="delCard(event,${c.id},'${escHtml(c.title).replace(/'/g,"\\'")}')">✕</button>
+    </div>`;
+  return el;
+}
+
+['idea','editing','posted'].forEach(s=>{
+  Sortable.create(document.getElementById('col-'+s),{
+    group:'kb',animation:150,
+    ghostClass:'sortable-ghost',dragClass:'sortable-drag',
+    onEnd(evt){
+      const id=parseInt(evt.item.dataset.id);
+      const ns=evt.to.dataset.status, os=evt.from.dataset.status;
+      if(os!==ns){
+        const c=allCards[os].find(x=>x.id===id);
+        if(c){allCards[os]=allCards[os].filter(x=>x.id!==id);c.status=ns;allCards[ns].splice(evt.newIndex,0,c);}
+      }
+      ['idea','editing','posted'].forEach(st=>document.getElementById('cnt-'+st).textContent=allCards[st].length);
+      const items=[];
+      ['idea','editing','posted'].forEach(st=>{
+        document.querySelectorAll('#col-'+st+' .cc').forEach((el,i)=>items.push({id:parseInt(el.dataset.id),status:st,order:i}));
+      });
+      fetch('/api/content/order/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({items})});
+    }
+  });
+});
+
+function toggleDrop(){document.getElementById('as-drop').classList.toggle('on')}
+document.addEventListener('click',e=>{if(!e.target.closest('#as-wrap'))document.getElementById('as-drop').classList.remove('on')});
+function pickAcc(id,name){
+  document.getElementById('as-text').textContent=name;
+  document.getElementById('as-drop').classList.remove('on');
+  window.location.href=id?`/content/?account=${id}`:'/content/';
+}
+
+function openAddCard(s){document.getElementById('card-status').value=s;openModal('add-card-mo');}
+
+async function addCard(){
+  const title=document.getElementById('card-title').value.trim();
+  if(!title)return;
+  const btn=document.getElementById('save-card-btn');
+  btn.disabled=true;btn.textContent='Adding…';
+  try{
+    const res=await fetch('/api/content/add/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body:JSON.stringify({title,description:document.getElementById('card-desc').value.trim(),status:document.getElementById('card-status').value,account_id:document.getElementById('card-account').value||null})
+    });
+    const card=await res.json();
+    if(card.id){
+      allCards[card.status].unshift(card);
+      const col=document.getElementById('col-'+card.status);
+      col.insertBefore(mkCard(card),col.firstChild);
+      document.getElementById('cnt-'+card.status).textContent=allCards[card.status].length;
+      document.getElementById('card-title').value='';
+      document.getElementById('card-desc').value='';
+      document.getElementById('card-account').selectedIndex=0;
+      closeModal('add-card-mo');
+    }
+  }catch(e){console.error(e);}
+  btn.disabled=false;btn.textContent='Add Card';
+}
+
+function delCard(e,id,title){
+  e.stopPropagation();
+  confirmAction({icon:'🗑️',msg:`Delete "${title}"?`,sub:'This card will be permanently removed.'},async()=>{
+    await fetch('/api/content/'+id+'/',{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
+    ['idea','editing','posted'].forEach(s=>{allCards[s]=allCards[s].filter(c=>c.id!==id);});
+    document.querySelectorAll('.cc[data-id="'+id+'"]').forEach(el=>el.remove());
+    ['idea','editing','posted'].forEach(s=>document.getElementById('cnt-'+s).textContent=allCards[s].length);
+  });
+}
+
+function delAcc(id,name,e){
+  if(e)e.stopPropagation();
+  confirmAction({icon:'🔗',msg:`Remove account "@${name}"?`,sub:'Content linked to this account will remain.'},async()=>{
+    await fetch('/api/accounts/'+id+'/delete/',{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
+    document.getElementById('acli-'+id)?.remove();
+  });
+}
+
+renderAll();
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('add-card-mo')?.classList.contains('on'))addCard();
+});
+</script>
+{% endblock %}

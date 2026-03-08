@@ -1,0 +1,265 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Habits — VELORA{% endblock %}
+{% block page_title %}Habits{% endblock %}
+{% block extra_head %}
+<style>
+.hab-layout{display:grid;grid-template-columns:1fr 252px;gap:18px}
+.date-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ring-wrap{position:relative;width:56px;height:56px;flex-shrink:0}
+.ring-svg{transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--bg3);stroke-width:5}
+.ring-fill{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset .6s cubic-bezier(.34,1.56,.64,1)}
+.ring-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--accent)}
+.hab-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .2s;position:relative;overflow:hidden;margin-bottom:7px}
+.hab-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--hc,var(--accent));opacity:.5;transition:opacity .2s}
+.hab-card:hover::before{opacity:1}
+.hab-chk{width:30px;height:30px;border-radius:8px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:all .2s;cursor:pointer}
+.hab-chk.done{color:#000;transform:scale(1.05)}
+.hab-info{flex:1;min-width:0}
+.hab-name{font-size:13px;font-weight:600}
+.hab-name.done{color:var(--text3);text-decoration:line-through}
+.hab-desc{font-size:10px;color:var(--text3);margin-top:1px}
+.hab-meta{text-align:right;flex-shrink:0}
+.hab-streak{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)}
+.hab-rate{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px}
+.hab-acts{display:flex;gap:3px;opacity:0;transition:opacity .18s;margin-left:6px;flex-shrink:0}
+.hab-card:hover .hab-acts{opacity:1}
+.hab-btn{width:24px;height:24px;border-radius:5px;background:transparent;border:1px solid var(--border2);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .18s}
+.hab-btn.edit:hover{background:var(--glow);color:var(--accent);border-color:rgba(255,149,0,.3)}
+.hab-btn.del:hover{background:rgba(255,59,48,.1);color:var(--red);border-color:rgba(255,59,48,.2)}
+.show-hist{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px;cursor:pointer;font-size:11px;color:var(--text3);transition:all .18s;display:flex;align-items:center;justify-content:center;gap:7px;font-family:'Inter',sans-serif;margin-top:4px}
+.show-hist:hover{border-color:var(--accent);color:var(--accent);background:var(--glow2)}
+.hist-sec{display:none;margin-top:12px}
+.hist-sec.on{display:block}
+.hist-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:6px;margin-bottom:12px}
+.hist-cell{aspect-ratio:1;border-radius:3px;background:var(--bg3);border:1px solid var(--border)}
+.hist-cell.on{border-color:transparent}
+.sb-stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px;margin-bottom:10px;transition:all .18s}
+.sb-stat:hover{border-color:var(--border2)}
+.color-sw{width:26px;height:26px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:all .18s;flex-shrink:0}
+.color-sw.sel,.color-sw:hover{border-color:#fff;transform:scale(1.15)}
+</style>
+{% endblock %}
+{% block topbar_actions %}
+<button class="btn btn-p" onclick="openModal('hab-mo')">+ Add Habit</button>
+{% endblock %}
+{% block content %}
+<div class="hab-layout">
+  <div>
+    <div class="date-bar">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.5px">{{ today_display }}</div>
+        <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px">{{ today }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:700"><span id="done-c" style="color:var(--accent)">0</span> / <span id="total-c">0</span></div>
+          <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace">completed today</div>
+        </div>
+        <div class="ring-wrap">
+          <svg class="ring-svg" width="56" height="56" viewBox="0 0 56 56">
+            <circle class="ring-track" cx="28" cy="28" r="23"/>
+            <circle class="ring-fill" id="ring" cx="28" cy="28" r="23" stroke-dasharray="144.5" stroke-dashoffset="144.5"/>
+          </svg>
+          <div class="ring-lbl" id="ring-pct">0%</div>
+        </div>
+      </div>
+    </div>
+    <div id="hab-list"></div>
+    <button class="show-hist" onclick="toggleHist()">📅 <span id="hist-lbl">Show 30-Day History</span></button>
+    <div class="hist-sec" id="hist-sec">
+      <div class="card" style="padding:18px">
+        <div class="st" style="margin-bottom:12px">Last 30 Days</div>
+        <div id="hist-body"></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="sb-stat s1">
+      <div class="stat-label">Best Streak</div>
+      <div class="stat-value accent" id="sb-streak" style="font-size:22px">0<span class="stat-unit">days</span></div>
+    </div>
+    <div class="sb-stat s2">
+      <div class="stat-label">My Habits</div>
+      <div class="stat-value" id="sb-total" style="font-size:22px">0</div>
+    </div>
+    <div class="sb-stat s3">
+      <div class="stat-label">30-Day Avg</div>
+      <div class="stat-value green" id="sb-rate" style="font-size:22px">0<span class="stat-unit">%</span></div>
+      <div class="pb"><div class="pf" id="sb-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="mo" id="hab-mo">
+  <div class="mo-box">
+    <div class="mo-title"><em>✅</em><span id="hab-mo-t">Add Habit</span></div>
+    <input type="hidden" id="edit-hab-id">
+    <div class="fg"><label class="fl">Name</label><input class="fi" id="hab-name" placeholder="e.g. Morning workout…"></div>
+    <div class="fg"><label class="fl">Note (optional)</label><input class="fi" id="hab-desc" placeholder="Short description…"></div>
+    <div class="fg">
+      <label class="fl">Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:3px 0">
+        {% for val,name in color_choices %}
+        <div class="color-sw" data-color="{{ val }}" onclick="pickColor('{{ val }}')" style="background:{{ val }}" title="{{ name }}"></div>
+        {% endfor %}
+      </div>
+      <input type="hidden" id="hab-color" value="#FF9500">
+    </div>
+    <div class="mo-actions">
+      <button class="btn btn-g" onclick="closeModal('hab-mo');resetHabForm()">Cancel</button>
+      <button class="btn btn-p" id="hab-save-btn" onclick="saveHabit()">Add Habit</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let habits = {{ today_data|safe }};
+
+function pickColor(c){
+  document.getElementById('hab-color').value=c;
+  document.querySelectorAll('.color-sw').forEach(s=>s.classList.toggle('sel',s.dataset.color===c));
+}
+pickColor('#FF9500');
+
+function renderHabits(){
+  const list=document.getElementById('hab-list'); list.innerHTML='';
+  let done=0;
+  habits.forEach(h=>{
+    if(h.completed)done++;
+    const el=document.createElement('div'); el.className='hab-card'; el.id='hc-'+h.id;
+    el.style.setProperty('--hc',h.color);
+    el.innerHTML=`
+      <div class="hab-chk ${h.completed?'done':''}"
+           style="${h.completed?'background:'+h.color+';border-color:'+h.color:''}"
+           onclick="toggleHabit(${h.log_id},${h.id})">${h.completed?'✓':''}</div>
+      <div class="hab-info">
+        <div class="hab-name ${h.completed?'done':''}">${escHtml(h.name)}</div>
+        ${h.description?`<div class="hab-desc">${escHtml(h.description)}</div>`:''}
+      </div>
+      <div class="hab-meta">
+        <div class="hab-streak">${h.streak>0?'🔥 '+h.streak:'—'}</div>
+        <div class="hab-rate">${h.rate}% / 30d</div>
+      </div>
+      <div class="hab-acts">
+        <button class="hab-btn edit" onclick="editHabit(${h.id})" title="Edit">✎</button>
+        <button class="hab-btn del" onclick="delHabit(${h.id},'${escHtml(h.name).replace(/'/g,"\\'")}')">✕</button>
+      </div>`;
+    list.appendChild(el);
+  });
+  const total=habits.length, pct=total?Math.round((done/total)*100):0;
+  const circ=144.5;
+  document.getElementById('ring').style.strokeDashoffset=circ-(pct/100)*circ;
+  document.getElementById('ring-pct').textContent=pct+'%';
+  document.getElementById('done-c').textContent=done;
+  document.getElementById('total-c').textContent=total;
+  const best=habits.length?Math.max(...habits.map(h=>h.streak)):0;
+  const avg=habits.length?Math.round(habits.reduce((a,h)=>a+h.rate,0)/habits.length):0;
+  document.getElementById('sb-streak').innerHTML=best+'<span class="stat-unit">days</span>';
+  document.getElementById('sb-total').textContent=total;
+  document.getElementById('sb-rate').innerHTML=avg+'<span class="stat-unit">%</span>';
+  document.getElementById('sb-bar').style.width=avg+'%';
+}
+
+async function toggleHabit(logId,habId){
+  const res=await fetch('/api/habits/toggle/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({log_id:logId})});
+  const d=await res.json();
+  const h=habits.find(x=>x.id===habId);
+  if(h){h.completed=d.completed;h.streak=d.streak;}
+  renderHabits();
+}
+
+async function saveHabit(){
+  const name=document.getElementById('hab-name').value.trim();
+  if(!name){document.getElementById('hab-name').focus();return;}
+  const btn=document.getElementById('hab-save-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  const desc=document.getElementById('hab-desc').value.trim();
+  const color=document.getElementById('hab-color').value;
+  const eid=document.getElementById('edit-hab-id').value;
+  try{
+    if(eid){
+      const res=await fetch('/api/habits/'+eid+'/update/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({name,description:desc,color})});
+      const d=await res.json();
+      const h=habits.find(x=>x.id===parseInt(eid));
+      if(h){h.name=d.name;h.color=d.color;h.description=desc;}
+    }else{
+      const res=await fetch('/api/habits/add/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({name,description:desc,color})});
+      const d=await res.json();
+      habits.push(d);
+    }
+    renderHabits();resetHabForm();closeModal('hab-mo');
+  }catch(e){console.error(e);}
+  btn.disabled=false;btn.textContent=eid?'Save':'Add Habit';
+}
+
+function editHabit(id){
+  const h=habits.find(x=>x.id===id);if(!h)return;
+  document.getElementById('hab-mo-t').textContent='Edit Habit';
+  document.getElementById('edit-hab-id').value=id;
+  document.getElementById('hab-name').value=h.name;
+  document.getElementById('hab-desc').value=h.description||'';
+  document.getElementById('hab-save-btn').textContent='Save';
+  pickColor(h.color);
+  openModal('hab-mo');
+}
+
+function delHabit(id,name){
+  confirmAction({icon:'✅',msg:`Remove habit "${name}"?`,sub:'Your history for this habit will be kept.'},async()=>{
+    await fetch('/api/habits/'+id+'/delete/',{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
+    habits=habits.filter(h=>h.id!==id);
+    renderHabits();
+  });
+}
+
+function resetHabForm(){
+  document.getElementById('hab-mo-t').textContent='Add Habit';
+  document.getElementById('edit-hab-id').value='';
+  document.getElementById('hab-name').value='';
+  document.getElementById('hab-desc').value='';
+  document.getElementById('hab-save-btn').textContent='Add Habit';
+  pickColor('#FF9500');
+}
+
+let histLoaded=false;
+async function toggleHist(){
+  const sec=document.getElementById('hist-sec'),lbl=document.getElementById('hist-lbl');
+  const open=sec.classList.toggle('on');
+  lbl.textContent=open?'Hide History':'Show 30-Day History';
+  if(open&&!histLoaded){
+    histLoaded=true;
+    document.getElementById('hist-body').innerHTML='<div style="color:var(--text3);font-size:11px">Loading…</div>';
+    const res=await fetch('/api/habits/all/');
+    const d=await res.json();
+    renderHistory(d.habits);
+  }
+}
+function renderHistory(list){
+  const body=document.getElementById('hist-body');body.innerHTML='';
+  const today=new Date();
+  if(!list.length){body.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">No habits yet.</div>';return;}
+  list.forEach(h=>{
+    const logMap={};h.logs.forEach(l=>{logMap[l.date]=l.completed;});
+    const div=document.createElement('div');
+    let cells='';
+    for(let i=29;i>=0;i--){
+      const d=new Date(today);d.setDate(d.getDate()-i);
+      const iso=d.toISOString().split('T')[0];
+      const done=logMap[iso]===true;
+      cells+=`<div class="hist-cell ${done?'on':''}" style="${done?'background:'+h.color:''}" title="${iso}"></div>`;
+    }
+    div.innerHTML=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:8px;height:8px;border-radius:50%;background:${h.color};display:inline-block"></span><span style="font-size:11px;font-weight:600">${escHtml(h.name)}</span></div><div class="hist-grid">${cells}</div>`;
+    body.appendChild(div);
+  });
+}
+
+renderHabits();
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('hab-mo')?.classList.contains('on'))saveHabit();
+});
+</script>
+{% endblock %}

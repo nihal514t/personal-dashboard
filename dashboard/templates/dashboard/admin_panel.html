@@ -1,0 +1,226 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Admin Panel — VELORA{% endblock %}
+{% block page_title %}Admin Panel{% endblock %}
+{% block extra_head %}
+<style>
+.ap-tabs{display:flex;gap:3px;margin-bottom:18px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:5px}
+.ap-tab{flex:1;padding:8px;border-radius:9px;border:none;background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s}
+.ap-tab.on{background:var(--bg3);color:var(--text);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.ap-sec{display:none}.ap-sec.on{display:block}
+.cv-row{padding:13px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;transition:background .14s}
+.cv-row:hover{background:var(--bg3)}
+.cv-row:last-child{border-bottom:none}
+.cv-title{font-size:12px;font-weight:600}
+.cv-meta{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px}
+.user-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
+.user-head{display:flex;align-items:center;gap:10px}
+.user-av{width:36px;height:36px;border-radius:9px;background:var(--glow);border:1px solid rgba(255,149,0,.2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);font-family:'Syne',sans-serif;flex-shrink:0}
+.user-nm{font-size:13px;font-weight:600}
+.user-mail{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace}
+.user-accs{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.user-acc-tag{padding:3px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);display:flex;align-items:center;gap:4px}
+.assign-wrap{display:flex;gap:6px;margin-top:4px}
+.acc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.acc-mgr{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:9px;transition:all .18s}
+.acc-mgr:hover{border-color:var(--border2)}
+.acc-mgr-info{flex:1;min-width:0}
+.acc-mgr-un{font-size:12px;font-weight:600}
+.acc-mgr-plat{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:1px}
+.acc-mgr-own{font-size:9px;color:var(--accent);font-family:'DM Mono',monospace;margin-top:2px}
+.acc-mgr-del{width:24px;height:24px;border:1px solid var(--border2);background:transparent;border-radius:5px;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .18s;flex-shrink:0;opacity:0}
+.acc-mgr:hover .acc-mgr-del{opacity:1}
+.acc-mgr-del:hover{background:rgba(255,59,48,.1);color:var(--red);border-color:rgba(255,59,48,.2)}
+.notif-bar{background:rgba(255,149,0,.07);border:1px solid rgba(255,149,0,.15);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+</style>
+{% endblock %}
+{% block topbar_actions %}
+<button class="btn btn-p" onclick="openModal('add-acc-mo')">+ Add Account</button>
+{% endblock %}
+{% block content %}
+{% if notifs %}
+<div class="notif-bar">
+  <span style="color:var(--accent)">🔔</span>
+  <span style="font-size:12px">You have <strong>{{ notifs|length }}</strong> new notification{{ notifs|length|pluralize }}.</span>
+  <button class="btn btn-g btn-sm" style="margin-left:auto" onclick="markAllRead()">Mark all read</button>
+</div>
+{% endif %}
+<div class="ap-tabs">
+  <button class="ap-tab on" onclick="showTab('content')">📋 Content Review</button>
+  <button class="ap-tab" onclick="showTab('accounts')">🔗 Accounts</button>
+  <button class="ap-tab" onclick="showTab('users')">👥 Users</button>
+</div>
+
+<!-- Content Review -->
+<div class="ap-sec on" id="tab-content">
+  <div class="card">
+    {% for c in content %}
+    <div class="cv-row" id="cvr-{{ c.id }}">
+      <div>
+        <div class="cv-title">{{ c.title }}</div>
+        <div class="cv-meta">{{ c.created_by.username|default:"?" }} · {{ c.account.username|default:"No acc" }} · {{ c.get_status_display }}</div>
+      </div>
+      <span class="badge b-{{ c.approval_status }}">{{ c.get_approval_status_display }}</span>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-ok btn-sm" onclick="setApproval({{ c.id }},'approved')" title="Approve">✓ Approve</button>
+        <button class="btn btn-d btn-sm" onclick="setApproval({{ c.id }},'rejected')" title="Reject">✕ Reject</button>
+      </div>
+      <button class="btn btn-g btn-sm" onclick="delContent({{ c.id }},'{{ c.title|escapejs }}')">Remove</button>
+    </div>
+    {% empty %}
+    <div style="padding:28px;text-align:center;color:var(--text3);font-size:12px">No content to review.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Accounts -->
+<div class="ap-sec" id="tab-accounts">
+  <div class="acc-grid" id="acc-mgr-grid">
+    {% for acc in accounts %}
+    <div class="acc-mgr" id="amgr-{{ acc.id }}">
+      <span class="pd pd-{{ acc.platform }}"></span>
+      <div class="acc-mgr-info">
+        <div class="acc-mgr-un">{{ acc.username }}</div>
+        <div class="acc-mgr-plat">{{ acc.get_platform_display }}</div>
+        <div class="acc-mgr-own">{{ acc.owner.username|default:"Unassigned" }}</div>
+      </div>
+      <button class="acc-mgr-del" onclick="delAccMgr({{ acc.id }},'{{ acc.username|escapejs }}')">✕</button>
+    </div>
+    {% empty %}
+    <div id="no-acc-msg" style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text3);font-size:12px">No accounts yet. Add one above.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Users -->
+<div class="ap-sec" id="tab-users">
+  <div class="g3" id="users-grid">
+    {% for user in users %}
+    <div class="user-card">
+      <div class="user-head">
+        <div class="user-av">{{ user.username|first|upper }}</div>
+        <div>
+          <div class="user-nm">{{ user.username }}</div>
+          <div class="user-mail">{{ user.email|default:"no email" }}</div>
+        </div>
+      </div>
+      <div class="user-accs">
+        {% for acc in user.social_accounts.all %}
+        <div class="user-acc-tag"><span class="pd pd-{{ acc.platform }}"></span>{{ acc.username }}</div>
+        {% empty %}<div style="font-size:10px;color:var(--text3)">No accounts assigned</div>{% endfor %}
+      </div>
+      <div class="assign-wrap">
+        <select class="fi" id="assign-acc-{{ user.id }}" style="font-size:11px">
+          <option value="">Assign account…</option>
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}">{{ acc.get_platform_display }} — {{ acc.username }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-g btn-sm" onclick="assignAcc({{ user.id }})">Assign</button>
+      </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:1/-1;padding:28px;text-align:center;color:var(--text3);font-size:12px">No regular users yet.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="mo" id="add-acc-mo">
+  <div class="mo-box">
+    <div class="mo-title"><em>🔗</em>Add Social Account</div>
+    <div class="fg">
+      <label class="fl">Platform</label>
+      <select class="fi" id="acc-plat">
+        <option value="instagram">Instagram</option>
+        <option value="youtube">YouTube</option>
+        <option value="tiktok">TikTok</option>
+        <option value="twitter">Twitter/X</option>
+        <option value="linkedin">LinkedIn</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Username / Handle</label><input class="fi" id="acc-username" placeholder="@username"></div>
+    <div class="fg">
+      <label class="fl">Assign to User</label>
+      <select class="fi" id="acc-user">
+        <option value="">— unassigned —</option>
+        {% for user in users %}<option value="{{ user.id }}">{{ user.username }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="mo-actions">
+      <button class="btn btn-g" onclick="closeModal('add-acc-mo')">Cancel</button>
+      <button class="btn btn-p" onclick="addAcc()">Add Account</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTab(name){
+  document.querySelectorAll('.ap-sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.ap-tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+name).classList.add('on');
+  event.target.classList.add('on');
+}
+
+async function setApproval(id, status){
+  const res=await fetch('/api/content/'+id+'/approval/',{
+    method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+    body:JSON.stringify({approval_status:status})
+  });
+  const d=await res.json();
+  const row=document.getElementById('cvr-'+id);
+  if(row){
+    const badge=row.querySelector('.badge');
+    if(badge){badge.className='badge b-'+status;badge.textContent=status.charAt(0).toUpperCase()+status.slice(1);}
+  }
+}
+
+function delContent(id,title){
+  confirmAction({icon:'📋',msg:`Remove "${title}"?`,sub:'Content will be permanently deleted.'},async()=>{
+    await fetch('/api/content/'+id+'/',{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
+    document.getElementById('cvr-'+id)?.remove();
+  });
+}
+
+function delAccMgr(id,name){
+  confirmAction({icon:'🔗',msg:`Remove account "@${name}"?`,sub:'Content linked to this account will remain.'},async()=>{
+    await fetch('/api/accounts/'+id+'/delete/',{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
+    document.getElementById('amgr-'+id)?.remove();
+  });
+}
+
+async function addAcc(){
+  const uname=document.getElementById('acc-username').value.trim();
+  if(!uname)return;
+  const res=await fetch('/api/accounts/add/',{
+    method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+    body:JSON.stringify({
+      platform:document.getElementById('acc-plat').value,
+      username:uname,
+      user_id:document.getElementById('acc-user').value||null
+    })
+  });
+  if(res.ok){closeModal('add-acc-mo');location.reload();}
+}
+
+async function assignAcc(userId){
+  const sel=document.getElementById('assign-acc-'+userId);
+  const accId=sel.value;
+  if(!accId)return;
+  const res=await fetch('/api/accounts/assign/',{
+    method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+    body:JSON.stringify({account_id:parseInt(accId),user_id:userId})
+  });
+  if(res.ok){location.reload();}
+}
+
+async function markAllRead(){
+  await fetch('/api/notifications/read/',{method:'POST',headers:{'X-CSRFToken':getCsrf()}});
+  document.querySelector('.notif-bar')?.remove();
+  document.getElementById('notif-dot')?.classList.remove('on');
+}
+</script>
+{% endblock %}
